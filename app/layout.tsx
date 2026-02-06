@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "My Run App",
+  title: "pace war",
   description:
-    "Track je hardloopsessies, zie scores en vergelijk je prestaties met vrienden.",
-  applicationName: "My Run App",
+    "The ultimate running competition with your friends",
+  applicationName: "pace war",
   manifest: "/manifest.json",
 };
 

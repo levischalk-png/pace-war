@@ -1,7 +1,7 @@
 {
-  "name": "My Run App",
-  "short_name": "MyRun",
-  "description": "Track je hardloopsessies en vergelijk scores met vrienden.",
+  "name": "pace war",
+  "short_name": "pace war",
+  "description": "The ultimate running competition with your friends",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
