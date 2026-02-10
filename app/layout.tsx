@@ -14,11 +14,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "pace war",
+  title: "Pace War",
   description:
     "The ultimate running competition with your friends",
-  applicationName: "pace war",
-  manifest: "/manifest.json",
+  applicationName: "Pace War",
+  manifest: "/manifest.json?v=2",
+  appleWebApp: {
+    title: "Pace War",
+  },
 };
 
 export const viewport: Viewport = {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "my-run-app-v1";
+const CACHE_NAME = "pace-war-v2";
 
 // Voeg hier de belangrijkste routes/assets toe die je offline wil hebben
 const URLS_TO_CACHE = ["/", "/leaderboard"];
