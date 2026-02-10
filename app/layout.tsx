@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description:
     "The ultimate running competition with your friends",
   applicationName: "Pace War",
-  manifest: "/manifest.json?v=2",
+  manifest: "/manifest.json",
   appleWebApp: {
     title: "Pace War",
   },
