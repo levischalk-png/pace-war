@@ -1,5 +1,5 @@
 // lib/database.ts
-import { supabase, User, Run } from './supabase';
+import { supabaseAdmin as supabase, User, Run } from './supabase';
 import { getWeekInfo } from './scoreCalculator';
 
 /**

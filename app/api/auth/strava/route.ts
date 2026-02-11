@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   // Haal je Client ID op uit de omgevingsvariabelen
   const clientId = process.env.STRAVA_CLIENT_ID;
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
   // Check of de Client ID er is
   if (!clientId) {

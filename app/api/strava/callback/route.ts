@@ -7,13 +7,14 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get('code');
   const error = searchParams.get('error');
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
   if (error) {
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=access_denied`);
+    return NextResponse.redirect(`${baseUrl}/?error=access_denied`);
   }
 
   if (!code) {
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=no_code`);
+    return NextResponse.redirect(`${baseUrl}/?error=no_code`);
   }
 
   try {
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     if (!user) {
       console.error('❌ Kon gebruiker niet aanmaken in database');
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=database_error`);
+      return NextResponse.redirect(`${baseUrl}/?error=database_error`);
     }
 
     console.log('✅ Gebruiker in database:', user.name);
@@ -97,10 +98,10 @@ export async function GET(request: NextRequest) {
     console.log('✅ Cookies opgeslagen');
     console.log('=== Callback Compleet ===');
 
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?strava=connected`);
+    return NextResponse.redirect(`${baseUrl}/?strava=connected`);
     
   } catch (error) {
     console.error('❌ Strava OAuth error:', error);
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=token_exchange_failed`);
+    return NextResponse.redirect(`${baseUrl}/?error=token_exchange_failed`);
   }
 }

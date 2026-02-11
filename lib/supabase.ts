@@ -8,7 +8,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase credentials ontbreken in .env.local');
 }
 
+// Publieke client (voor client-side gebruik)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Server-side client met service role key (bypassed RLS)
+// Gebruik deze ALLEEN in API routes / server-side code
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+export const supabaseAdmin = supabaseServiceRoleKey
+  ? createClient(supabaseUrl, supabaseServiceRoleKey)
+  : supabase; // fallback naar anon client als service key ontbreekt
 
 // Type definitions
 export interface User {
