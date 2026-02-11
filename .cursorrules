@@ -1,0 +1,19 @@
+Pace War 
+
+## Project Context
+- **Naam:** Pace War
+- **Concept:** High-performance hardloop-app met een professionele Esport/Pro-athlete vibe.
+- **Tech Stack:** Next.js, Tailwind CSS, Supabase, Lucide-react.
+
+## Vibe Coding & Samenwerking
+- **Gebruiker:** Beginner. Leg alles stap-voor-stap uit.
+- **AI Rol:** Schrijf volledige code, wees proactief in designvoorstellen die 'smooth' aanvoelen.
+
+## Design Systeem
+- **Achtergrond:** Puur Wit (#FFFFFF).
+- **Hoofdkleur (Leaderboard/Accent):** Blauw.
+- **Randen:** Solid Zwart (gebruik `border-black` en `border-2`).
+- **Uitzondering:** De "Connect with Strava" knop blijft Oranje.
+- **Stijl:** Clean, hoog contrast, professioneel en simpel. Geen paars of gradients meer.
+- **Vormgeving:** Scherpe randen of lichte afronding (`rounded-md`), met zwarte omlijning.
+- **Interactie:** Super 'smooth' transities. Gebruik 'hover:scale-105' op kaarten en knoppen voor een tactiel gevoel.

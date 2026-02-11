@@ -22,10 +22,14 @@ export const metadata: Metadata = {
   appleWebApp: {
     title: "Pace War",
   },
+  other: {
+    "color-scheme": "light",
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#020617",
+  themeColor: "#ffffff",
+  colorScheme: "light",
 };
 
 export default function RootLayout({
@@ -34,9 +38,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="bg-white" style={{ colorScheme: 'light' }}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-black min-h-screen`}
+        style={{ backgroundColor: '#ffffff', color: '#000000' }}
       >
         <ServiceWorkerRegister />
         {children}

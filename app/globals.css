@@ -1,26 +1,51 @@
 @import "tailwindcss";
 
+/* --- Pace War Clean Light Mode --- */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #000000;
+  --esport-blue: #0066ff;
+  --esport-blue-dark: #0052cc;
+  --esport-blue-light: #3385ff;
+  --strava-orange: #fc4c02;
+  --strava-orange-dark: #d93d00;
+  --text-muted: #666666;
+  --border-color: #000000;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: #ffffff;
+  --color-foreground: #000000;
+  --color-esport-blue: #0066ff;
+  --color-esport-blue-dark: #0052cc;
+  --color-esport-blue-light: #3385ff;
+  --color-strava-orange: #fc4c02;
+  --color-strava-orange-dark: #d93d00;
+  --color-text-muted: #666666;
+  --color-border: #000000;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background: #ffffff !important;
+  color: #000000 !important;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+html {
+  background: #ffffff !important;
+  color-scheme: light;
+}
+
+/* Force light mode - disable dark mode */
+@media (prefers-color-scheme: dark) {
+  html {
+    background: #ffffff !important;
+    color-scheme: light;
+  }
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
 }

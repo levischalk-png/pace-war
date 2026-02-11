@@ -53,21 +53,21 @@ export default function LeaderboardPage() {
 
   // Functie om border kleur te krijgen voor top 3
   const getBorderClass = (rank: number) => {
-    if (rank === 1) return 'border-yellow-400 shadow-yellow-400/50';
-    if (rank === 2) return 'border-gray-300 shadow-gray-300/50';
-    if (rank === 3) return 'border-orange-600 shadow-orange-600/50';
-    return 'border-white/20';
+    if (rank === 1) return 'border-esport-blue border-l-4';
+    if (rank === 2) return 'border-esport-blue-light border-l-4';
+    if (rank === 3) return 'border-esport-blue-dark border-l-4';
+    return '';
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4 md:p-8">
+    <div className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-5xl mx-auto">
         
         {/* Header met Back Button */}
         <div className="mb-8">
           <Link 
             href="/"
-            className="inline-flex items-center gap-2 text-blue-300 hover:text-blue-200 transition mb-6"
+            className="inline-flex items-center gap-2 text-esport-blue hover:text-black transition-all duration-300 mb-6 rounded-2xl px-4 py-2 hover:bg-gray-50 border border-black"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -76,10 +76,10 @@ export default function LeaderboardPage() {
           </Link>
           
           <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-black text-white mb-4 tracking-tight">
+            <h1 className="text-4xl md:text-6xl font-black text-black mb-4 tracking-tight">
               🏆 LEADERBOARD
             </h1>
-            <p className="text-blue-200 text-lg md:text-xl">
+            <p className="text-gray-600 text-lg md:text-xl">
               De Rankings van Pace War
             </p>
           </div>
@@ -87,25 +87,25 @@ export default function LeaderboardPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-500/20 border-2 border-red-500 text-white px-6 py-4 rounded-xl mb-6">
+          <div className="bg-red-50 border-2 border-black text-black px-6 py-4 rounded-2xl mb-6">
             <p className="font-semibold">❌ {error}</p>
           </div>
         )}
 
         {/* Loading State */}
         {loading && (
-          <div className="text-center text-white py-12">
-            <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-400 mb-4"></div>
+          <div className="text-center text-black py-12">
+            <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-esport-blue mb-4"></div>
             <p className="text-xl">Laden van rankings...</p>
           </div>
         )}
 
         {/* Leaderboard Table */}
         {!loading && leaderboard.length > 0 && (
-          <div className="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+          <div className="bg-white rounded-2xl border-2 border-black overflow-hidden shadow-lg transition-all duration-300">
             
             {/* Table Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4">
+            <div className="bg-esport-blue px-6 py-4 border-b-2 border-black">
               <div className="grid grid-cols-12 gap-4 font-bold text-white text-sm md:text-base">
                 <div className="col-span-2 text-center">RANG</div>
                 <div className="col-span-5 md:col-span-6">LOPER</div>
@@ -115,7 +115,7 @@ export default function LeaderboardPage() {
             </div>
 
             {/* Table Body */}
-            <div className="divide-y divide-white/10">
+            <div className="divide-y divide-black">
               {leaderboard.map((entry, index) => {
                 const rank = index + 1;
                 const medal = getMedal(rank);
@@ -125,8 +125,8 @@ export default function LeaderboardPage() {
                   <div
                     key={entry.id}
                     className={`
-                      px-6 py-4 transition-all hover:bg-white/10
-                      ${isTop3 ? `border-l-4 ${getBorderClass(rank)} shadow-lg` : ''}
+                      px-6 py-4 transition-all duration-300 hover:bg-gray-50
+                      ${isTop3 ? `${getBorderClass(rank)}` : ''}
                     `}
                   >
                     <div className="grid grid-cols-12 gap-4 items-center">
@@ -139,10 +139,10 @@ export default function LeaderboardPage() {
                           )}
                           <span className={`
                             font-black text-xl md:text-2xl
-                            ${rank === 1 ? 'text-yellow-400' : ''}
-                            ${rank === 2 ? 'text-gray-300' : ''}
-                            ${rank === 3 ? 'text-orange-600' : ''}
-                            ${rank > 3 ? 'text-blue-300' : ''}
+                            ${rank === 1 ? 'text-esport-blue' : ''}
+                            ${rank === 2 ? 'text-esport-blue-light' : ''}
+                            ${rank === 3 ? 'text-esport-blue-dark' : ''}
+                            ${rank > 3 ? 'text-gray-600' : ''}
                           `}>
                             #{rank}
                           </span>
@@ -153,7 +153,7 @@ export default function LeaderboardPage() {
                       <div className="col-span-5 md:col-span-6">
                         <p className={`
                           font-bold text-base md:text-lg
-                          ${isTop3 ? 'text-white' : 'text-blue-100'}
+                          ${isTop3 ? 'text-black' : 'text-gray-700'}
                         `}>
                           {entry.name}
                         </p>
@@ -161,9 +161,9 @@ export default function LeaderboardPage() {
 
                       {/* Run Count */}
                       <div className="col-span-3 md:col-span-2 text-center">
-                        <div className="inline-flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full">
-                          <span className="text-blue-300 text-xs md:text-sm">🏃‍♂️</span>
-                          <span className="text-white font-semibold text-sm md:text-base">
+                        <div className="inline-flex items-center gap-1 bg-gray-100 px-3 py-1 rounded-xl border border-black">
+                          <span className="text-esport-blue text-xs md:text-sm">🏃‍♂️</span>
+                          <span className="text-black font-semibold text-sm md:text-base">
                             {entry.runCount}
                           </span>
                         </div>
@@ -173,10 +173,10 @@ export default function LeaderboardPage() {
                       <div className="col-span-2 text-right">
                         <p className={`
                           font-black text-lg md:text-2xl
-                          ${rank === 1 ? 'text-yellow-400' : ''}
-                          ${rank === 2 ? 'text-gray-300' : ''}
-                          ${rank === 3 ? 'text-orange-600' : ''}
-                          ${rank > 3 ? 'text-blue-200' : ''}
+                          ${rank === 1 ? 'text-esport-blue' : ''}
+                          ${rank === 2 ? 'text-esport-blue-light' : ''}
+                          ${rank === 3 ? 'text-esport-blue-dark' : ''}
+                          ${rank > 3 ? 'text-black' : ''}
                         `}>
                           {entry.totalScore.toLocaleString('nl-NL', { maximumFractionDigits: 1 })}
                         </p>
@@ -187,7 +187,7 @@ export default function LeaderboardPage() {
                     {/* Top 3 Extra Info */}
                     {isTop3 && (
                       <div className="mt-2 text-center">
-                        <span className="inline-block bg-gradient-to-r from-blue-500/20 to-purple-500/20 px-3 py-1 rounded-full text-xs font-semibold text-blue-200">
+                        <span className="inline-block bg-esport-blue/10 px-3 py-1 rounded-xl text-xs font-semibold text-esport-blue border border-black">
                           {rank === 1 && '👑 KAMPIOEN'}
                           {rank === 2 && '⭐ RUNNER-UP'}
                           {rank === 3 && '🔥 TOP PERFORMER'}
@@ -203,12 +203,12 @@ export default function LeaderboardPage() {
 
         {/* Empty State */}
         {!loading && leaderboard.length === 0 && (
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-12 text-center border border-white/20">
+          <div className="bg-white rounded-2xl p-12 text-center border-2 border-black">
             <div className="text-6xl mb-4">🏆</div>
-            <p className="text-blue-200 text-lg mb-2">
+            <p className="text-gray-600 text-lg mb-2">
               Nog geen deelnemers op het leaderboard
             </p>
-            <p className="text-blue-300 text-sm">
+            <p className="text-gray-600 text-sm">
               Wees de eerste om te scoren!
             </p>
           </div>
@@ -219,7 +219,7 @@ export default function LeaderboardPage() {
           <button
             onClick={fetchLeaderboard}
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-bold px-6 py-3 rounded-xl transition transform hover:scale-105 disabled:hover:scale-100"
+            className="bg-esport-blue hover:bg-esport-blue-dark disabled:bg-gray-400 text-white font-bold px-6 py-3 rounded-2xl transition-all duration-300 transform hover:scale-105 disabled:hover:scale-100 shadow-lg border-2 border-black disabled:border-gray-500"
           >
             {loading ? 'Laden...' : '🔄 Ververs Rankings'}
           </button>
