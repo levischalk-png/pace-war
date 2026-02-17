@@ -1,7 +1,7 @@
 // app/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 
 interface Run {
@@ -26,9 +26,10 @@ export default function Home() {
   const [error, setError] = useState('');
   const [totalScore, setTotalScore] = useState(0);
   const [syncStats, setSyncStats] = useState<{newRuns: number, skippedRuns: number} | null>(null);
+  const syncInProgressRef = useRef(false); // Voorkom dubbele sync calls
 
   // Haal runs op uit de database (geen Strava-aanroep)
-  const fetchRunsFromDb = async (): Promise<boolean> => {
+  const fetchRunsFromDb = useCallback(async (): Promise<boolean> => {
     try {
       const response = await fetch('/api/strava/activities');
       if (response.ok) {
@@ -53,7 +54,45 @@ export default function Home() {
       setError('Er ging iets mis');
       return false;
     }
+  }, []);
+
+  const handleStravaLogin = () => {
+    window.location.href = '/api/auth/strava';
   };
+
+  const handleSync = useCallback(async () => {
+    // Voorkom dubbele sync calls
+    if (syncInProgressRef.current || syncing) {
+      console.log('Sync al bezig, skip...');
+      return;
+    }
+
+    syncInProgressRef.current = true;
+    setSyncing(true);
+    setError('');
+    setSyncStats(null);
+    
+    try {
+      const response = await fetch('/api/strava/sync-scores', { method: 'POST' });
+      if (response.ok) {
+        const data = await response.json();
+        setSyncStats({ newRuns: data.newRuns, skippedRuns: data.skippedRuns });
+        setTotalScore(data.totalScore);
+        setIsConnected(true);
+        // Laad runs opnieuw na sync
+        await fetchRunsFromDb();
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Synchronisatie mislukt');
+      }
+    } catch (err) {
+      console.error('Sync fout:', err);
+      setError('Er ging iets mis bij synchroniseren');
+    } finally {
+      setSyncing(false);
+      syncInProgressRef.current = false;
+    }
+  }, [syncing, fetchRunsFromDb]);
 
   // Bij laden: eerst database checken, alleen bij ?strava=connected en géén data sync doen
   useEffect(() => {
@@ -77,39 +116,11 @@ export default function Home() {
       const hasRuns = await fetchRunsFromDb();
       setIsLoading(false);
       // Alleen na net inloggen en nog geen runs: één keer sync met Strava
-      if (justConnected && !hasRuns) handleSync();
-    })();
-  }, []);
-
-  const handleStravaLogin = () => {
-    window.location.href = '/api/auth/strava';
-  };
-
-  const handleSync = async () => {
-    setSyncing(true);
-    setError('');
-    setSyncStats(null);
-    try {
-      const response = await fetch('/api/strava/sync-scores', { method: 'POST' });
-      if (response.ok) {
-        const data = await response.json();
-        setSyncStats({ newRuns: data.newRuns, skippedRuns: data.skippedRuns });
-        setTotalScore(data.totalScore);
-        setIsConnected(true);
-        setLoading(true);
-        await fetchRunsFromDb();
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Synchronisatie mislukt');
+      if (justConnected && !hasRuns && !syncInProgressRef.current) {
+        handleSync();
       }
-    } catch (err) {
-      console.error('Sync fout:', err);
-      setError('Er ging iets mis bij synchroniseren');
-    } finally {
-      setSyncing(false);
-      setLoading(false);
-    }
-  };
+    })();
+  }, [fetchRunsFromDb, handleSync]);
 
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
