@@ -20,36 +20,65 @@ interface Run {
 export default function Home() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [isConnected, setIsConnected] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Eerste check: database laden
+  const [loading, setLoading] = useState(false);   // Bij handmatig verversen
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState('');
   const [totalScore, setTotalScore] = useState(0);
   const [syncStats, setSyncStats] = useState<{newRuns: number, skippedRuns: number} | null>(null);
 
+  // Haal runs op uit de database (geen Strava-aanroep)
+  const fetchRunsFromDb = async (): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/strava/activities');
+      if (response.ok) {
+        const data = await response.json();
+        setRuns(data);
+        const total = data.reduce((sum: number, run: Run) => sum + run.total_score, 0);
+        setTotalScore(Math.round(total * 100) / 100);
+        setIsConnected(true);
+        return data.length > 0;
+      }
+      if (response.status === 401) {
+        setIsConnected(false);
+        setRuns([]);
+        return false;
+      }
+      const errorData = await response.json();
+      setError(errorData.error || 'Kon activiteiten niet ophalen');
+      setIsConnected(false);
+      return false;
+    } catch (err) {
+      console.error('Fetch fout:', err);
+      setError('Er ging iets mis');
+      return false;
+    }
+  };
+
+  // Bij laden: eerst database checken, alleen bij ?strava=connected en géén data sync doen
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    
-    if (params.get('strava') === 'connected') {
-      setIsConnected(true);
-      setError('');
-      window.history.replaceState({}, '', '/');
-      // Auto-sync na login
-      handleSync();
-    }
-    
+
     if (params.get('error')) {
       const errorType = params.get('error');
-      if (errorType === 'access_denied') {
-        setError('Je hebt de toegang geweigerd');
-      } else if (errorType === 'no_code') {
-        setError('Er ging iets mis bij het inloggen');
-      } else if (errorType === 'token_exchange_failed') {
-        setError('Er ging iets mis bij het ophalen van je gegevens');
-      } else if (errorType === 'database_error') {
-        setError('Database fout - check je Supabase configuratie');
-      }
+      if (errorType === 'access_denied') setError('Je hebt de toegang geweigerd');
+      else if (errorType === 'no_code') setError('Er ging iets mis bij het inloggen');
+      else if (errorType === 'token_exchange_failed') setError('Er ging iets mis bij het ophalen van je gegevens');
+      else if (errorType === 'database_error') setError('Database fout - check je Supabase configuratie');
       window.history.replaceState({}, '', '/');
+      setIsLoading(false);
+      return;
     }
+
+    const justConnected = params.get('strava') === 'connected';
+    if (justConnected) window.history.replaceState({}, '', '/');
+
+    (async () => {
+      const hasRuns = await fetchRunsFromDb();
+      setIsLoading(false);
+      // Alleen na net inloggen en nog geen runs: één keer sync met Strava
+      if (justConnected && !hasRuns) handleSync();
+    })();
   }, []);
 
   const handleStravaLogin = () => {
@@ -60,66 +89,24 @@ export default function Home() {
     setSyncing(true);
     setError('');
     setSyncStats(null);
-    
     try {
-      console.log('🔄 Start synchronisatie...');
-      
-      const response = await fetch('/api/strava/sync-scores', {
-        method: 'POST',
-      });
-      
+      const response = await fetch('/api/strava/sync-scores', { method: 'POST' });
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Sync resultaat:', data);
-        
-        setSyncStats({
-          newRuns: data.newRuns,
-          skippedRuns: data.skippedRuns
-        });
+        setSyncStats({ newRuns: data.newRuns, skippedRuns: data.skippedRuns });
         setTotalScore(data.totalScore);
         setIsConnected(true);
-        
-        // Laad runs opnieuw
-        await fetchRuns();
+        setLoading(true);
+        await fetchRunsFromDb();
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Synchronisatie mislukt');
       }
     } catch (err) {
-      console.error('❌ Sync fout:', err);
+      console.error('Sync fout:', err);
       setError('Er ging iets mis bij synchroniseren');
     } finally {
       setSyncing(false);
-    }
-  };
-
-  const fetchRuns = async () => {
-    setLoading(true);
-    setError('');
-    
-    try {
-      console.log('📊 Haal runs op...');
-      const response = await fetch('/api/strava/activities');
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log(`✅ ${data.length} runs ontvangen`);
-        setRuns(data);
-        
-        // Bereken totale score
-        const total = data.reduce((sum: number, run: Run) => sum + run.total_score, 0);
-        setTotalScore(Math.round(total * 100) / 100);
-        
-        setIsConnected(true);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Kon activiteiten niet ophalen');
-        setIsConnected(false);
-      }
-    } catch (err) {
-      console.error('❌ Fetch fout:', err);
-      setError('Er ging iets mis');
-    } finally {
       setLoading(false);
     }
   };
@@ -203,16 +190,16 @@ export default function Home() {
           </div>
         )}
 
-        {/* Sync Button - Alleen tonen als verbonden */}
-        {isConnected && (
+        {/* Sync-knop alleen als verbonden en nog géén runs in de database */}
+        {isConnected && runs.length === 0 && !isLoading && (
           <div className="bg-white rounded-2xl p-6 mb-8 border-2 border-black transition-all duration-300">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="text-center md:text-left">
                 <h3 className="text-xl font-bold text-black mb-1">
-                  🔄 Synchroniseer je Runs
+                  🔄 Synchroniseer met Strava
                 </h3>
                 <p className="text-gray-600 text-sm">
-                  Haal nieuwe activiteiten op en bereken scores
+                  Haal je activiteiten op en bereken scores
                 </p>
               </div>
               <button
@@ -229,10 +216,23 @@ export default function Home() {
                     Bezig...
                   </span>
                 ) : (
-                  '🔄 Sync Nu'
+                  '🔄 Synchroniseer met Strava'
                 )}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Kleine "Sync Nu" alleen als er al runs zijn (handmatig verversen) */}
+        {isConnected && runs.length > 0 && (
+          <div className="mb-6 flex justify-end">
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="text-esport-blue hover:underline disabled:opacity-50 text-sm font-medium"
+            >
+              {syncing ? 'Bezig...' : '🔄 Sync nieuwe runs van Strava'}
+            </button>
           </div>
         )}
 
@@ -338,16 +338,24 @@ export default function Home() {
           </div>
         )}
 
-        {/* Loading State */}
-        {loading && (
+        {/* Loading: database check bij eerste laden */}
+        {isLoading && (
           <div className="text-center text-black py-12">
             <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-esport-blue mb-4"></div>
-            <p className="text-xl">Laden...</p>
+            <p className="text-xl">Database wordt gecheckt...</p>
+          </div>
+        )}
+
+        {/* Loading bij handmatig verversen */}
+        {loading && !isLoading && (
+          <div className="text-center text-black py-8">
+            <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-4 border-esport-blue mb-2"></div>
+            <p className="text-sm text-gray-600">Runs laden...</p>
           </div>
         )}
 
         {/* Empty State - Alleen tonen als verbonden maar geen runs */}
-        {isConnected && runs.length === 0 && !loading && !syncing && (
+        {isConnected && runs.length === 0 && !isLoading && !loading && !syncing && (
           <div className="bg-white rounded-2xl p-12 text-center border-2 border-black">
             <div className="text-6xl mb-4">🏃‍♂️</div>
             <p className="text-gray-600 text-lg mb-2">
