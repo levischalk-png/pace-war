@@ -1,8 +1,9 @@
 // app/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 interface Run {
   id: string;
@@ -20,35 +21,50 @@ interface Run {
 export default function Home() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [isDbChecking, setIsDbChecking] = useState(true); // "Gegevens ophalen..." (DB check)
+  const [authChecked, setAuthChecked] = useState(false);  // Wacht tot Supabase Auth bekend is
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState('');
   const [totalScore, setTotalScore] = useState(0);
   const [syncStats, setSyncStats] = useState<{newRuns: number, skippedRuns: number} | null>(null);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    
-    if (params.get('strava') === 'connected') {
-      setIsConnected(true);
-      setError('');
-      window.history.replaceState({}, '', '/');
-      // Auto-sync na login
-      handleSync();
-    }
-    
-    if (params.get('error')) {
-      const errorType = params.get('error');
-      if (errorType === 'access_denied') {
-        setError('Je hebt de toegang geweigerd');
-      } else if (errorType === 'no_code') {
-        setError('Er ging iets mis bij het inloggen');
-      } else if (errorType === 'token_exchange_failed') {
-        setError('Er ging iets mis bij het ophalen van je gegevens');
-      } else if (errorType === 'database_error') {
-        setError('Database fout - check je Supabase configuratie');
+  const didInitRef = useRef(false);
+
+  const fetchRunsFromDb = useCallback(async (): Promise<{ connected: boolean; runCount: number }> => {
+    setError('');
+    try {
+      const response = await fetch('/api/strava/activities');
+
+      if (response.ok) {
+        const data = await response.json();
+        setRuns(data);
+
+        const total = data.reduce((sum: number, run: Run) => sum + run.total_score, 0);
+        setTotalScore(Math.round(total * 100) / 100);
+
+        // Als de API ok terugkomt, hebben we een user_id cookie en dus een "connected" sessie
+        setIsConnected(true);
+        return { connected: true, runCount: data.length };
       }
-      window.history.replaceState({}, '', '/');
+
+      if (response.status === 401) {
+        // Niet ingelogd (geen user_id cookie)
+        setIsConnected(false);
+        setRuns([]);
+        setTotalScore(0);
+        return { connected: false, runCount: 0 };
+      }
+
+      const errorData = await response.json();
+      setError(errorData.error || 'Kon activiteiten niet ophalen');
+      setIsConnected(false);
+      return { connected: false, runCount: 0 };
+    } catch (err) {
+      console.error('❌ Fetch fout:', err);
+      setError('Er ging iets mis');
+      setIsConnected(false);
+      return { connected: false, runCount: 0 };
     }
   }, []);
 
@@ -56,21 +72,18 @@ export default function Home() {
     window.location.href = '/api/auth/strava';
   };
 
-  const handleSync = async () => {
+  const handleSync = useCallback(async () => {
     setSyncing(true);
     setError('');
     setSyncStats(null);
     
     try {
-      console.log('🔄 Start synchronisatie...');
-      
       const response = await fetch('/api/strava/sync-scores', {
         method: 'POST',
       });
       
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Sync resultaat:', data);
         
         setSyncStats({
           newRuns: data.newRuns,
@@ -80,7 +93,7 @@ export default function Home() {
         setIsConnected(true);
         
         // Laad runs opnieuw
-        await fetchRuns();
+        await fetchRunsFromDb();
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Synchronisatie mislukt');
@@ -91,38 +104,53 @@ export default function Home() {
     } finally {
       setSyncing(false);
     }
-  };
+  }, [fetchRunsFromDb]);
 
-  const fetchRuns = async () => {
-    setLoading(true);
-    setError('');
-    
-    try {
-      console.log('📊 Haal runs op...');
-      const response = await fetch('/api/strava/activities');
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log(`✅ ${data.length} runs ontvangen`);
-        setRuns(data);
-        
-        // Bereken totale score
-        const total = data.reduce((sum: number, run: Run) => sum + run.total_score, 0);
-        setTotalScore(Math.round(total * 100) / 100);
-        
-        setIsConnected(true);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Kon activiteiten niet ophalen');
-        setIsConnected(false);
-      }
-    } catch (err) {
-      console.error('❌ Fetch fout:', err);
-      setError('Er ging iets mis');
-    } finally {
-      setLoading(false);
+  // Bij laden: wacht op Supabase Auth check, dan DB check (runs tabel). Pas daarna UI tonen.
+  useEffect(() => {
+    if (didInitRef.current) return; // voorkomt dubbele runs in dev (StrictMode)
+    didInitRef.current = true;
+
+    const params = new URLSearchParams(window.location.search);
+    const justConnected = params.get('strava') === 'connected';
+
+    const errorType = params.get('error');
+    if (errorType) {
+      if (errorType === 'access_denied') setError('Je hebt de toegang geweigerd');
+      else if (errorType === 'no_code') setError('Er ging iets mis bij het inloggen');
+      else if (errorType === 'token_exchange_failed') setError('Er ging iets mis bij het ophalen van je gegevens');
+      else if (errorType === 'database_error') setError('Database fout - check je Supabase configuratie');
+      window.history.replaceState({}, '', '/');
+      setAuthChecked(true);
+      setIsDbChecking(false);
+      return;
     }
-  };
+
+    // Verwijder de query params meteen, zodat refresh/back niet opnieuw triggert
+    if (justConnected) window.history.replaceState({}, '', '/');
+
+    (async () => {
+      setIsDbChecking(true);
+
+      // Wacht tot Supabase Auth bekend is (ook als je het (nog) niet gebruikt)
+      try {
+        await supabase.auth.getUser();
+      } catch {
+        // ignore
+      } finally {
+        setAuthChecked(true);
+      }
+
+      // 1) Check database eerst
+      const result = await fetchRunsFromDb();
+      setIsDbChecking(false);
+
+      // 2) Alleen als DB echt 0 runs heeft (en we net verbonden zijn), doen we 1x de Strava sync
+      if (justConnected && result.connected && result.runCount === 0) {
+        handleSync();
+      }
+    })();
+  }, [fetchRunsFromDb, handleSync]);
 
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
@@ -182,8 +210,17 @@ export default function Home() {
           </div>
         )}
 
-        {/* Login Card - Alleen tonen als NIET verbonden */}
-        {!isConnected && (
+        {/* Loading: eerst Supabase Auth + DB check */}
+        {isDbChecking && (
+          <div className="bg-white rounded-2xl p-8 mb-8 border-2 border-black shadow-lg text-center">
+            <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-4 border-esport-blue mb-4"></div>
+            <p className="text-lg font-semibold text-black">Gegevens ophalen...</p>
+            <p className="text-sm text-gray-600 mt-1">We checken je database data.</p>
+          </div>
+        )}
+
+        {/* Login Card - Alleen tonen als NIET verbonden (pas na checks) */}
+        {!isDbChecking && authChecked && !isConnected && (
           <div className="bg-white rounded-2xl p-8 mb-8 border-2 border-black shadow-lg transition-all duration-300">
             <h2 className="text-2xl md:text-3xl font-bold text-black mb-4">
               🚀 Start je Journey
@@ -203,16 +240,16 @@ export default function Home() {
           </div>
         )}
 
-        {/* Sync Button - Alleen tonen als verbonden */}
-        {isConnected && (
+        {/* Sync Button - Alleen tonen als verbonden én DB zegt 0 runs (pas na checks) */}
+        {!isDbChecking && authChecked && isConnected && runs.length === 0 && (
           <div className="bg-white rounded-2xl p-6 mb-8 border-2 border-black transition-all duration-300">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="text-center md:text-left">
                 <h3 className="text-xl font-bold text-black mb-1">
-                  🔄 Synchroniseer je Runs
+                  🔄 Synchroniseer met Strava
                 </h3>
                 <p className="text-gray-600 text-sm">
-                  Haal nieuwe activiteiten op en bereken scores
+                  Je database is nog leeg. Haal je activiteiten op en bereken scores.
                 </p>
               </div>
               <button
@@ -229,10 +266,23 @@ export default function Home() {
                     Bezig...
                   </span>
                 ) : (
-                  '🔄 Sync Nu'
+                  '🔄 Synchroniseer met Strava'
                 )}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Optioneel: kleine sync-link als er al data is (geen “dubbele handelingen”) */}
+        {!isDbChecking && authChecked && isConnected && runs.length > 0 && (
+          <div className="mb-6 flex justify-end">
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="text-esport-blue hover:underline disabled:opacity-50 text-sm font-medium"
+            >
+              {syncing ? 'Bezig...' : '🔄 Sync nieuwe runs van Strava'}
+            </button>
           </div>
         )}
 
@@ -338,8 +388,8 @@ export default function Home() {
           </div>
         )}
 
-        {/* Loading State */}
-        {loading && (
+        {/* Loading State (legacy) */}
+        {loading && !isDbChecking && (
           <div className="text-center text-black py-12">
             <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-esport-blue mb-4"></div>
             <p className="text-xl">Laden...</p>
@@ -347,7 +397,7 @@ export default function Home() {
         )}
 
         {/* Empty State - Alleen tonen als verbonden maar geen runs */}
-        {isConnected && runs.length === 0 && !loading && !syncing && (
+        {authChecked && isConnected && runs.length === 0 && !isDbChecking && !loading && !syncing && (
           <div className="bg-white rounded-2xl p-12 text-center border-2 border-black">
             <div className="text-6xl mb-4">🏃‍♂️</div>
             <p className="text-gray-600 text-lg mb-2">
