@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   const error = searchParams.get('error');
   const baseUrl =
+    request.nextUrl.origin ||
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.NEXT_PUBLIC_BASE_URL ||
     'http://localhost:3000';
@@ -59,43 +60,38 @@ export async function GET(request: NextRequest) {
     console.log('✅ Gebruiker in database:', user.name);
     console.log('📅 Joined at:', user.joined_at);
 
-    // Sla tokens op in cookies
+    // Sla tokens op in cookies – path=/ zodat ze bij elke pagina-request worden meegestuurd
     const cookieStore = await cookies();
-    
-    cookieStore.set('strava_access_token', tokenData.access_token, {
+    const cookieOpts = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 6, // 6 uur
+      sameSite: 'lax' as const,
+      path: '/',
+    };
+
+    cookieStore.set('strava_access_token', tokenData.access_token, {
+      ...cookieOpts,
+      maxAge: 60 * 60 * 6, // 6 uur (Strava vernieuwt we via refresh)
     });
 
     cookieStore.set('strava_refresh_token', tokenData.refresh_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30, // 30 dagen
+      ...cookieOpts,
+      maxAge: 60 * 60 * 24 * 90, // 90 dagen – blijf ingelogd
     });
 
     cookieStore.set('strava_expires_at', tokenData.expires_at.toString(), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30,
+      ...cookieOpts,
+      maxAge: 60 * 60 * 24 * 90,
     });
 
     cookieStore.set('strava_athlete_id', tokenData.athlete.id.toString(), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30,
+      ...cookieOpts,
+      maxAge: 60 * 60 * 24 * 90,
     });
 
-    // Sla ook user_id op voor makkelijke toegang later
     cookieStore.set('user_id', user.id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30,
+      ...cookieOpts,
+      maxAge: 60 * 60 * 24 * 90, // 90 dagen sessie
     });
 
     console.log('✅ Cookies opgeslagen');

@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 interface Run {
@@ -19,6 +20,7 @@ interface Run {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [runs, setRuns] = useState<Run[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [isDbChecking, setIsDbChecking] = useState(true); // "Gegevens ophalen..." (DB check)
@@ -126,8 +128,11 @@ export default function Home() {
       return;
     }
 
-    // Verwijder de query params meteen, zodat refresh/back niet opnieuw triggert
-    if (justConnected) window.history.replaceState({}, '', '/');
+    // Na Strava-redirect: server-data (cookies) opnieuw ophalen zodat de ingelogde staat direct klopt
+    if (justConnected) {
+      router.refresh();
+      window.history.replaceState({}, '', '/');
+    }
 
     (async () => {
       setIsDbChecking(true);
